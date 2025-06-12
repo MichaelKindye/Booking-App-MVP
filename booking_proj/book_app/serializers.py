@@ -61,7 +61,13 @@ class ServiceSerializer(serializers.ModelSerializer):
                 slots.append(slot)
                 current_time+=timedelta(hours=session_hour)    
         return slots
-        
+
+
+class TimeSlotSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TimeSlot
+        fields = ['day', 'start', 'end']
+
 
 class AppointmentSerializer(serializers.ModelSerializer):
     service_id = serializers.PrimaryKeyRelatedField(queryset=Service.objects.all(), write_only=True)
@@ -77,19 +83,19 @@ class AppointmentSerializer(serializers.ModelSerializer):
         }
 
     def validate_time_slot(self, value):
-        print(value[1])
-        try:
-            value[0] is str
-        except:
-            raise serializers.ValidationError("first argument must be a day in str format.")
-        try:
-            value[1] is time and value[2] is time
-        except:
-            raise serializers.ValidationError("second and third arguments must be a time object.")
-        try:
-            value[1] > value[2]
-        except:
-            raise serializers.ValidationError('start_time cannot be greater than end_time.')
+        if len(value) != 3:
+            raise serializers.ValidationError("Value must be a list with 3 objects.")
+        
+        day, start_time, end_time = value
+        
+        if not isinstance(day, str):
+            raise serializers.ValidationError("day must be a string. e.g., 'mon', 'tue'...")
+        
+        if not isinstance(start_time, str) or not isinstance(end_time, str):
+            raise serializers.ValidationError("start_time and end_time elements must be time objects. e.g., '12:00'.")
+
+        if start_time >= end_time:
+            raise serializers.ValidationError("Start time must be before end time")
         return value
 
     def create(self, validated_data):
@@ -99,7 +105,7 @@ class AppointmentSerializer(serializers.ModelSerializer):
         start = validated_data['time_slot'][1]
         end = validated_data['time_slot'][2]
         time_slot =  TimeSlot.objects.get(day=day, start=start, end=end, service=service_id)
-        self.time_slot = time_slot
+       
         if time_slot.appointment is None:
             with transaction.atomic():
                 appointment = Appointment.objects.create(service=service_id, customer=user)
