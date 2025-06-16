@@ -45,7 +45,7 @@ class Appointment(models.Model):
     customer = models.ForeignKey(User, on_delete=models.CASCADE)
     is_accepted = models.BooleanField(default=False)
     status = models.CharField(max_length=50, choices=STATUS_CHOICES, default='pending')
-
+    
 
     def __str__(self):
         return self.service.title
@@ -68,10 +68,17 @@ class TimeSlot(models.Model):
     start = models.TimeField()
     end = models.TimeField()
     service = models.ForeignKey(Service, on_delete=models.CASCADE, related_name='time_slots')
-    appointment = models.ForeignKey(Appointment, null=True, on_delete=models.SET_NULL)
+    appointment = models.ForeignKey(Appointment, on_delete=models.SET_NULL, null=True)
 
     def __str__(self):
         return f'( {self.service.title} ) {self.day}: {self.start} - {self.end}'
     
 
 
+class Schedule(models.Model):
+    date = models.DateField()
+    time = models.TimeField()
+    appointment = models.OneToOneField(Appointment, on_delete=models.CASCADE)
+
+    def __str__(self):
+        return f"appointment on {self.date}: {self.date.day} at {self.time}"
